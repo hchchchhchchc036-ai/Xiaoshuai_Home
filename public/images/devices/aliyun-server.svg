@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" role="img" aria-label="云服务器示意图">
+  <rect width="480" height="320" rx="24" fill="#f0f7ff"/>
+  <g fill="#ffffff" stroke="#2563eb" stroke-width="5">
+    <rect x="112" y="76" width="256" height="72" rx="14"/>
+    <rect x="112" y="172" width="256" height="72" rx="14"/>
+  </g>
+  <g fill="#10b981"><circle cx="144" cy="112" r="7"/><circle cx="144" cy="208" r="7"/></g>
+  <g stroke="#94a3b8" stroke-width="5" stroke-linecap="round"><path d="M180 112h126m-126 96h126"/></g>
+</svg>

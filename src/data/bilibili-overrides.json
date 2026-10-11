@@ -1,0 +1,88 @@
+{
+  "source": "按小衰提供的 B 站截图校正；公开接口未返回观看进度。",
+  "items": [
+    {
+      "title": "鬼灭之刃",
+      "link": "https://www.bilibili.com/bangumi/play/ss26801",
+      "status": "completed",
+      "progress": 26,
+      "totalEpisodes": 26
+    },
+    {
+      "title": "咒术回战",
+      "link": "https://www.bilibili.com/bangumi/play/ss34430",
+      "status": "completed",
+      "progress": 24,
+      "totalEpisodes": 24
+    },
+    {
+      "title": "世界顶尖的暗杀者,转生为异世界贵族",
+      "link": "https://www.bilibili.com/bangumi/play/ss39481",
+      "status": "completed",
+      "progress": 12,
+      "totalEpisodes": 12
+    },
+    {
+      "title": "堀与宫村",
+      "link": "https://www.bilibili.com/bangumi/play/ss36198",
+      "status": "completed",
+      "progress": 13,
+      "totalEpisodes": 13
+    },
+    {
+      "title": "转生成蜘蛛又怎样！",
+      "link": "https://www.bilibili.com/bangumi/play/ss36167",
+      "status": "completed",
+      "progress": 24,
+      "totalEpisodes": 24
+    },
+    {
+      "title": "我的青春恋爱物语果然有问题。完",
+      "link": "https://www.bilibili.com/bangumi/play/ss32998",
+      "status": "completed",
+      "progress": 12,
+      "totalEpisodes": 12
+    },
+    {
+      "title": "我独自升级 第二季 -起于暗影-",
+      "link": "https://www.bilibili.com/bangumi/play/ss80763",
+      "status": "completed",
+      "progress": 13,
+      "totalEpisodes": 13
+    },
+    {
+      "title": "久保同学不放过我",
+      "link": "https://www.bilibili.com/bangumi/play/ss43814",
+      "status": "watching",
+      "progress": 1
+    },
+    {
+      "title": "葬送的芙莉莲",
+      "link": "https://www.bilibili.com/bangumi/play/ss46089",
+      "status": "watching",
+      "progress": 9
+    },
+    {
+      "title": "Charlotte",
+      "link": "https://www.bilibili.com/bangumi/play/ss2572",
+      "status": "watching",
+      "progress": 1
+    },
+    {
+      "title": "Free!",
+      "link": "https://www.bilibili.com/bangumi/play/ss4394",
+      "status": "watching",
+      "progress": 1,
+      "totalEpisodes": 12,
+      "cover": "https://i0.hdslb.com/bfs/bangumi/46872e4e59ee0e3e3afc8479ba5a2f6a3c266671.jpg@220w_280h.webp",
+      "description": "四位昔日泳友在高中重逢，成立游泳部，展开关于青春与羁绊的故事。",
+      "year": "2013",
+      "studio": "日本",
+      "genre": [
+        "校园",
+        "运动"
+      ],
+      "rating": 9.3
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { applyBilibiliOverrides } from "../scripts/update-bilibili.mjs";
+
+const { items } = JSON.parse(readFileSync(new URL("../src/data/bilibili-overrides.json", import.meta.url), "utf8"));
+const completed = items.find((item) => item.status === "completed");
+const free = items.find((item) => item.title === "Free!");
+const upstream = [{ ...completed, status: "watching", progress: 0, cover: "upstream-cover" }];
+const result = applyBilibiliOverrides(upstream, [completed, free]);
+assert.equal(result.length, 2);
+assert.equal(result[0].status, "completed");
+assert.equal(result[0].progressPercent, 100);
+assert.equal(result[0].cover, "upstream-cover");
+assert.equal(result[1].title, "Free!");
+assert.equal(result[1].progressPercent, 8);
+assert.deepEqual(applyBilibiliOverrides(result, [completed, free]), result);
+assert.equal(items.filter((item) => item.status === "completed").length, 7);
+assert.equal(applyBilibiliOverrides([{ link: "#" }, { link: "#" }], []).length, 2);
+assert.equal(applyBilibiliOverrides([{ link: completed.link + "?from=space", totalEpisodes: 26 }], [completed]).length, 1);
+assert.equal(applyBilibiliOverrides([{ link: "test", totalEpisodes: 12 }], [])[0].progressPercent, 0);
+assert.throws(() => applyBilibiliOverrides([], [{ link: "#" }]), /有效链接/);
+console.log("Verified screenshot corrections survive sync and missing anime are added once.");
