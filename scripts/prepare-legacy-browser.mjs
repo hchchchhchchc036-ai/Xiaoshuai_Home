@@ -39,7 +39,7 @@ function parseOklch(value, hue = 240) {
 	};
 }
 
-function legacyValue(value) {
+function legacyValue(value, warnings) {
 	const parsed = valueParser(value);
 	parsed.walk((node) => {
 		if (node.type !== "function") return;
@@ -56,7 +56,10 @@ function legacyValue(value) {
 				return false;
 			}
 			const color = parseOklch(text);
-			if (!color) throw new Error(`Cannot convert legacy color: ${text}`);
+			if (!color) {
+				warnings.add(text);
+				return false;
+			}
 			node.type = "word";
 			node.value = `rgba(${color.rgb.join(",")},${color.alpha})`;
 			return false;
@@ -67,16 +70,30 @@ function legacyValue(value) {
 				if (child.type === "div" && child.value === ",") groups.push([]);
 				else groups.at(-1).push(child);
 			}
-			const first = valueParser.stringify(groups[1] || []).trim();
-			const second = valueParser.stringify(groups[2] || []).trim();
-			const weight = first.match(/\s+([\d.]+)%$/);
-			const color = first.replace(/\s+[\d.]+%$/, "");
+			const parts = groups.slice(1, 3).map((group) => {
+				const text = valueParser.stringify(group).trim();
+				const weight = text.match(/\s+([\d.]+)%$/);
+				return { color: text.replace(/\s+[\d.]+%$/, ""), weight: weight ? Number(weight[1]) : null };
+			});
+			if (parts.length !== 2) return false;
+			const transparentIndex = parts.findIndex((part) => part.color === "transparent");
+			const colorIndex = transparentIndex === 0 ? 1 : 0;
+			const color = parts[colorIndex].color;
+			const firstWeight = parts[0].weight ?? (parts[1].weight === null ? 50 : 100 - parts[1].weight);
+			const secondWeight = parts[1].weight ?? (100 - firstWeight);
+			const total = firstWeight + secondWeight;
+			const alpha = (colorIndex === 0 ? firstWeight : secondWeight) / Math.max(100, total);
 			const variable = color.match(/^var\((--[\w-]+)\)$/);
-			const transparent = /^transparent(?:\s+[\d.]+%)?$/.test(second);
+			if (transparentIndex !== -1 && !valueParser.stringify(node).includes("var(")) {
+				const converted = lightningcss.transform({ filename: "mix.css", code: Buffer.from(`.mix{color:${valueParser.stringify(node)}}`), targets: { chrome: 109 << 16 }, minify: true });
+				node.type = "word";
+				node.value = postcss.parse(converted.code.toString()).first.nodes[0].value;
+				return false;
+			}
 			// ponytail: opaque mixes use the first color in legacy CSS; modern CSS retains the exact mix.
-			const fallback = variable && transparent
-				? `rgba(var(--legacy-rgb-${variable[1].slice(2)},var(--legacy-rgb-primary)),calc(var(--legacy-alpha-${variable[1].slice(2)},1)*${weight ? Number(weight[1]) / 100 : 0.5}))`
-				: legacyValue(color || "transparent");
+			const fallback = variable && transparentIndex !== -1
+				? `rgba(var(--legacy-rgb-${variable[1].slice(2)},var(--legacy-rgb-primary)),calc(var(--legacy-alpha-${variable[1].slice(2)},1)*${alpha}))`
+				: legacyValue(color || "transparent", warnings);
 			node.type = "word";
 			node.value = fallback;
 			return false;
@@ -88,6 +105,7 @@ function legacyValue(value) {
 export function createLegacyCss(css) {
 	const root = postcss.parse(css);
 	const variables = new Set();
+	const warnings = new Set();
 	root.walkDecls((decl) => {
 		if (decl.prop.startsWith("--legacy-")) return;
 		if (decl.prop.startsWith("--")) {
@@ -114,11 +132,12 @@ export function createLegacyCss(css) {
 				}
 			}
 		}
-		decl.value = legacyValue(decl.value);
+		decl.value = legacyValue(decl.value, warnings);
 	});
 	return {
 		css: lightningcss.transform({ filename: "legacy.css", code: Buffer.from(root.toString()), targets: { chrome: 109 << 16 }, minify: true }).code.toString(),
 		variables: [...variables],
+		warnings: [...warnings],
 	};
 }
 
@@ -127,15 +146,24 @@ export function installLegacyStyles(variables) {
 	window.__legacyStylesInstalled = true;
 	var root = document.documentElement;
 	var signature = "";
+	var converted = new Set();
 	function updateColors(force) {
 		var computed = getComputedStyle(root);
-		var next = root.className + ":" + computed.getPropertyValue("--hue");
+		var next = root.classList.contains("dark") + ":" + computed.getPropertyValue("--hue");
 		if (!force && signature === next) return;
 		signature = next;
 		variables.forEach(function (name) {
 			var source = computed.getPropertyValue("--legacy-source-" + name.slice(2)).trim();
 			var match = source.match(/^oklch\(\s*([\d.e+-]+)(%?)\s+([\d.e+-]+)\s+([\d.e+-]+|none)(?:deg)?(?:\s*\/\s*([\d.e+-]+)(%?))?\s*\)$/i);
-			if (!match) return;
+			if (!match) {
+				if (converted.delete(name)) {
+					root.style.removeProperty(name);
+					root.style.removeProperty("--legacy-rgb-" + name.slice(2));
+					root.style.removeProperty("--legacy-alpha-" + name.slice(2));
+				}
+				return;
+			}
+			converted.add(name);
 			var rgb = oklchToRgb(Number(match[1]) / (match[2] ? 100 : 1), Number(match[3]), match[4] === "none" ? 0 : Number(match[4]));
 			var alpha = match[5] === undefined ? 1 : Number(match[5]) / (match[6] ? 100 : 1);
 			root.style.setProperty(name, "rgba(" + rgb.join(",") + "," + alpha + ")");
@@ -160,10 +188,10 @@ export function installLegacyStyles(variables) {
 	new MutationObserver(function (records) {
 		records.forEach(function (record) {
 			if (record.type === "childList") record.addedNodes.forEach(scan);
-			else if (record.target === root) updateColors(false);
 			else upgrade(record.target);
 		});
-	}).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["href", "class", "style"] });
+	}).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+	new MutationObserver(function () { updateColors(false); }).observe(root, { attributes: true, attributeFilter: ["class", "style"] });
 	window.addEventListener("load", function () { updateColors(true); }, { once: true });
 	updateColors(true);
 }
@@ -175,6 +203,7 @@ export async function prepareLegacyBrowser(directory = "dist") {
 	const files = (await readdir(assets)).filter((name) => name.endsWith(".css") && !name.endsWith(".legacy.css"));
 	for (const name of files) {
 		const result = createLegacyCss(await readFile(resolve(assets, name), "utf8"));
+		if (result.warnings.length) console.warn(`Legacy CSS ${name}: ${result.warnings.length} unsupported color expression(s) retained; modern CSS is unchanged.`);
 		result.variables.forEach((variable) => variables.add(variable));
 		await writeFile(resolve(assets, name.replace(/\.css$/, ".legacy.css")), result.css);
 	}
@@ -189,7 +218,7 @@ export async function prepareLegacyBrowser(directory = "dist") {
 			if (entry.isDirectory()) await walk(file);
 			else if (entry.name.endsWith(".html")) {
 				const html = await readFile(file, "utf8");
-				if (!html.includes("<head")) continue;
+				if (!/<head\b/i.test(html)) continue;
 				const clean = html.replace(/<script data-legacy-styles>[\s\S]*?<\/script>/g, "");
 				await writeFile(file, clean.replace(/<head\b[^>]*>/i, (head) => head + selector));
 			}
